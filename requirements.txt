@@ -1,0 +1,7 @@
+fastapi
+pydantic
+httpx
+python-dotenv
+uvicorn
+logging
+pathlib
