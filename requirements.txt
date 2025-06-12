@@ -1,7 +1,6 @@
 fastapi
-pydantic
+pydantic>=2.0.0
 httpx
 python-dotenv
 uvicorn
-logging
 pathlib

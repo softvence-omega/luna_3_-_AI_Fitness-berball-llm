@@ -1,10 +1,12 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, field_validator
 import httpx
 import os
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
+import asyncio
+from typing import Dict, Optional
 
 load_dotenv()
 
@@ -17,22 +19,91 @@ GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 # In-memory storage for responses (simulating database)
 response_storage = {}
 
+# New structure for user and session management
+user_sessions: Dict[str, Dict[str, 'ChatSession']] = {}
+
+# Session configuration
+SESSION_TIMEOUT = 3600  # 1 hour in seconds
+MAX_SESSIONS_PER_USER = 5
+MAX_MESSAGES_PER_SESSION = 50
+CLEANUP_INTERVAL = 300  # 5 minutes in seconds
+
+class ChatSession:
+    def __init__(self, user_id: Optional[str] = None):
+        self.history = []
+        self.user_id = user_id
+        self.created_at = datetime.utcnow()
+        self.last_activity = datetime.utcnow()
+        self.message_count = 0
+
+    def add_message(self, role: str, content: str) -> bool:
+        if self.message_count >= MAX_MESSAGES_PER_SESSION:
+            return False
+        
+        self.history.append({"role": role, "content": content})
+        self.last_activity = datetime.utcnow()
+        self.message_count += 1
+        return True
+
+    def get_history(self):
+        return self.history
+
+    def is_expired(self) -> bool:
+        return (datetime.utcnow() - self.last_activity).total_seconds() > SESSION_TIMEOUT
+
+    def clear(self):
+        self.history = []
+        self.message_count = 0
+
+async def cleanup_all_sessions():
+    while True:
+        try:
+            current_time = datetime.utcnow()
+            
+            # Clean up expired sessions for each user
+            for user_id in list(user_sessions.keys()):
+                user_session_dict = user_sessions[user_id]
+                
+                # Remove expired sessions
+                expired_sessions = [
+                    session_id for session_id, session in user_session_dict.items()
+                    if session.is_expired()
+                ]
+                for session_id in expired_sessions:
+                    del user_session_dict[session_id]
+                
+                # If user has no sessions left, remove the user entry
+                if not user_session_dict:
+                    del user_sessions[user_id]
+            
+        except Exception as e:
+            print(f"Error in cleanup task: {e}")
+        
+        await asyncio.sleep(CLEANUP_INTERVAL)
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(cleanup_all_sessions())
+
 class Feedback(BaseModel):
     user_id: str | None = None
     user_feedback: str
+    session_id: str | None = None
 
 class Rating(BaseModel):
     response_id: str
     rating: str
     comment: str | None = None
 
-    @validator("rating")
+    @field_validator("rating")
+    @classmethod
     def rating_must_be_valid(cls, v):
         if v not in ["Helpful", "Not Helpful"]:
             raise ValueError("Rating must be 'Helpful' or 'Not Helpful'")
         return v
 
-    @validator("comment")
+    @field_validator("comment")
+    @classmethod
     def comment_required_for_not_helpful(cls, v, values):
         if values.get("rating") == "Not Helpful" and (v is None or v.strip() == ""):
             raise ValueError("Comment is required for 'Not Helpful' rating")
@@ -45,6 +116,7 @@ class FeedbackResponse(BaseModel):
     ai_response: str
     timestamp: datetime
     status: str = "generated"
+    session_id: str | None = None
 
 class RatedFeedbackResponse(FeedbackResponse):
     rating: str | None = None
@@ -53,9 +125,17 @@ class RatedFeedbackResponse(FeedbackResponse):
     llm_analysis: str | None = None
     locked: bool = False
 
-def build_response_prompt(user_feedback: str) -> str:
+def build_response_prompt(user_feedback: str, chat_history=None) -> str:
+    if chat_history is None:
+        chat_history = []
+    history_str = ""
+    for msg in chat_history:
+        history_str += f"{msg['role']}: {msg['content']}\n"
     return f"""
-You are an AI assistant providing helpful and accurate responses. Based on the user's feedback, generate a clear and relevant response. If the feedback is about a technical topic like FastAPI, include specific code examples where applicable.
+You are an AI assistant providing helpful and accurate responses. Based on the user's feedback and the chat history, generate a clear and relevant response. If the feedback is about a technical topic like FastAPI, include specific code examples where applicable.
+
+### Chat History:
+{history_str}
 
 ### User Feedback:
 \"\"\"{user_feedback}\"\"\"
@@ -142,18 +222,52 @@ async def call_groq(prompt: str) -> str:
 
 @app.post("/generate-response", response_model=FeedbackResponse)
 async def generate_response(feedback: Feedback):
-    # Generate initial AI response
-    response_prompt = build_response_prompt(feedback.user_feedback)
+    session_id = feedback.session_id
+    user_id = feedback.user_id
+
+    if not user_id:
+        raise HTTPException(status_code=400, detail="User ID is required")
+
+    # Initialize user's session dictionary if it doesn't exist
+    if user_id not in user_sessions:
+        user_sessions[user_id] = {}
+
+    # Create new session if needed
+    if not session_id:
+        session_id = str(uuid.uuid4())
+        user_sessions[user_id][session_id] = ChatSession(user_id=user_id)
+    elif session_id not in user_sessions[user_id]:
+        user_sessions[user_id][session_id] = ChatSession(user_id=user_id)
+    
+    session = user_sessions[user_id][session_id]
+
+    # Add user message to history
+    if not session.add_message("user", feedback.user_feedback):
+        raise HTTPException(
+            status_code=400,
+            detail="Maximum message limit reached for this session"
+        )
+
+    # Generate AI response
+    response_prompt = build_response_prompt(feedback.user_feedback, session.get_history())
     ai_response = await call_groq(response_prompt)
+    
+    # Add AI response to history
+    if not session.add_message("assistant", ai_response):
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to store AI response in session history"
+        )
 
     # Store response in memory
     response_id = str(uuid.uuid4())
     response_data = {
-        "user_id": feedback.user_id,
+        "user_id": user_id,
         "user_feedback": feedback.user_feedback,
         "ai_response": ai_response,
         "timestamp": datetime.utcnow(),
-        "status": "generated"
+        "status": "generated",
+        "session_id": session_id
     }
     response_storage[response_id] = response_data
 
