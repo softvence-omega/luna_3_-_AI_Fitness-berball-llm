@@ -400,4 +400,6 @@ async def rate_response(rating: Rating):
     return RatedFeedbackResponse(response_id=rating.response_id, **response_data)
 
 
-    
+from api.nutrition_router import router as nutrition_router
+
+app.include_router(nutrition_router)
