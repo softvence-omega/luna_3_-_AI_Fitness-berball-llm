@@ -12,6 +12,7 @@ llm = ChatGoogleGenerativeAI(
     max_retries=2,
 )
 
+
 response_schemas = [
     ResponseSchema(name="total_protein_g", description="Total protein in grams, (e.g. 140, 35, 10)"),
     ResponseSchema(name="total_carbs_g", description="Total carbohydrates in grams, (e.g. 240, 80)"),

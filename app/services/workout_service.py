@@ -3,6 +3,7 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain.output_parsers import PydanticOutputParser
+
 from models.workout_schema import WorkoutPlanRequest, WorkoutUpdateRequest, WorkoutPlan, WorkoutPlanResponse
 
 
@@ -10,6 +11,7 @@ llm = ChatGoogleGenerativeAI(
     model="gemini-2.0-flash",
     temperature=0.7, 
 )
+
 
 parser = PydanticOutputParser(pydantic_object=WorkoutPlan)
 format_instructions = parser.get_format_instructions()
