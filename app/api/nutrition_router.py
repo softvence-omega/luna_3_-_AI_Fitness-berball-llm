@@ -16,7 +16,6 @@ async def analyze_meal_nutrition(image: UploadFile = File(...)):
     """
     try:
         print("Image :", image)
-        print("Image file: ", image.read())
         content = await image.read()
         return await nutrition_service.get_nutritional_analysis(content)
     except Exception as e:
