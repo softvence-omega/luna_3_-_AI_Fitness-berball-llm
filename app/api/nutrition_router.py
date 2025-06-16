@@ -1,6 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from services import nutrition_service
-from models.nutrition_schema import NutritionResponse
+from app.services import nutrition_service
+from app.models.nutrition_schema import NutritionResponse
 
 router = APIRouter(
     tags=["Nutrition"],

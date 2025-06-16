@@ -2,8 +2,8 @@
 # This file defines the API endpoints for creating and updating workout plans.
 
 from fastapi import APIRouter, HTTPException
-from models.workout_schema import WorkoutPlanRequest, WorkoutPlanResponse, WorkoutUpdateRequest
-from services import workout_service
+from app.models.workout_schema import WorkoutPlanRequest, WorkoutPlanResponse, WorkoutUpdateRequest
+from app.services import workout_service
 
 router = APIRouter(
     tags=["Workout"],
