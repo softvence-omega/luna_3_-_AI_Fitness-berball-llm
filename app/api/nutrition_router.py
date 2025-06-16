@@ -15,8 +15,11 @@ async def analyze_meal_nutrition(image: UploadFile = File(...)):
     service, and returns a detailed breakdown of its nutritional content.
     """
     try:
+        print("Image :", image)
+        print("Image file: ", image.read())
         content = await image.read()
         return await nutrition_service.get_nutritional_analysis(content)
     except Exception as e:
         # In a production environment, you would log the error `e`
+        print(e)
         raise HTTPException(status_code=500, detail="An error occurred during nutrition analysis.")
