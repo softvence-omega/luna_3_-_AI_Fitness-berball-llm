@@ -4,7 +4,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain.output_parsers import PydanticOutputParser
 
-from models.workout_schema import WorkoutPlanRequest, WorkoutUpdateRequest, WorkoutPlan, WorkoutPlanResponse
+from app.models.workout_schema import WorkoutPlanRequest, WorkoutUpdateRequest, WorkoutPlan, WorkoutPlanResponse
 
 
 llm = ChatGoogleGenerativeAI(
