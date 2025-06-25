@@ -410,7 +410,9 @@ async def rate_response(rating: Rating):
 
 from app.api.nutrition_router import router as nutrition_router
 from app.api.workout_router import router as workout_router
+from app.api.workout_calorie_calculation import router as workout_calorie_calculation_router
 
 app.include_router(nutrition_router)
 app.include_router(workout_router)
+app.include_router(workout_calorie_calculation_router)
 
