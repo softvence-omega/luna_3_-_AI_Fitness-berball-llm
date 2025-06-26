@@ -7,101 +7,72 @@ import dotenv
 # NOTE: Ensure the 'openai' package is installed in your environment: pip install openai
 import openai
 import re
+from typing import Dict, Any
 
 dotenv.load_dotenv()
 
 # OpenAI client setup
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-def calculate_calories_with_openai(exercise_data: ExerciseRequest) -> dict:
+def calculate_calories_with_openai(exercise_data: Dict[str, Any]) -> dict:
     """
-    Use OpenAI API to calculate calories burned based on exercise data.
-    
+    Use OpenAI API to calculate calories burned based on exercise data from API input.
     Args:
-        exercise_data (ExerciseRequest): Object containing exercise details.
-    
+        exercise_data (dict): Dictionary containing exercise details from API.
     Returns:
         dict: Calorie calculation results in JSON format.
     """
-    # Input validation
-    if exercise_data.body_weight <= 0:
-        raise ValueError("Body weight must be greater than zero")
-    if exercise_data.reps <= 0:
-        raise ValueError("Reps must be greater than zero")
+    # Extract and handle fields with defaults for missing/optional
+    user_height = exercise_data.get("userHight")
+    user_weight = exercise_data.get("userWeight")
+    exercise_name = exercise_data.get("exerciseName", "")
+    exercise_type = exercise_data.get("exerciseType", "")
+    exercise_description = exercise_data.get("exerciseDescription", "")
+    weight_lifted = exercise_data.get("weightLifted", 0)
+    reps = exercise_data.get("reps", 0)
+    sets = exercise_data.get("set", 0)
+    reset_time = exercise_data.get("resetTime", 0)
+    restime = exercise_data.get("restime", None)
 
-    # Calculate weight intensity ratio for context
-    weight_ratio = exercise_data.weightLifted / exercise_data.body_weight if exercise_data.weightLifted > 0 else 0
-    weight_percentage = round(weight_ratio * 100, 1)
-    avg_time_per_rep = exercise_data.rep_duration / exercise_data.reps
+    # Input validation (basic)
+    if not user_weight or user_weight <= 0:
+        raise ValueError("User weight must be provided and greater than zero.")
+    if not user_height or user_height <= 0:
+        raise ValueError("User height must be provided and greater than zero.")
+    if not exercise_name:
+        raise ValueError("Exercise name must be provided.")
 
-    # Prepare the enhanced prompt for OpenAI
+    # Prepare prompt parts based on available data
     prompt = f"""
     You are a fitness expert calculating calories burned. Use your knowledge of exercise physiology and specific exercises to provide accurate calorie calculations.
 
     User Information:
-    - Body weight: {exercise_data.body_weight} kg
-    - Height: {exercise_data.height} feet
+    - Body weight: {user_weight} kg
+    - Height: {user_height} cm
 
     Exercise Details:
-    - Exercise: {exercise_data.exerciseName}
-    - Type: {exercise_data.exerciseType}
-    - Weight lifted: {exercise_data.weightLifted} kg
-    - Repetitions: {exercise_data.reps}
-    - Sets: {exercise_data.sets}
-    - Rep duration: {exercise_data.rep_duration} seconds total ({round(avg_time_per_rep, 1)} seconds per rep)
-    - Rest time: {exercise_data.restTime} seconds between sets
+    - Exercise: {exercise_name}
+    - Type: {exercise_type}
+    """
+    if weight_lifted:
+        prompt += f"- Weight lifted: {weight_lifted} kg\n"
+    if reps:
+        prompt += f"- Repetitions: {reps}\n"
+    if sets:
+        prompt += f"- Sets: {sets}\n"
+    if reset_time:
+        prompt += f"- Set/Session duration: {reset_time} seconds\n"
+    if restime:
+        prompt += f"- Rest time between sets: {restime} seconds\n"
+    if exercise_description:
+        prompt += f"- Additional info: {exercise_description}\n"
 
-    EXERCISE-SPECIFIC CALCULATION REQUIREMENTS:
-
-    1. EXERCISE-SPECIFIC BASE MET VALUES - Different exercises burn different calories:
-       
-       UPPER BODY (Lower calorie burn):
-       - Bicep curls, tricep extensions: 2.5-3.0 MET
-       - Shoulder press, lateral raises: 3.0-3.5 MET
-       - Bench press, rows: 3.5-4.0 MET
-       
-       LOWER BODY (Higher calorie burn):
-       - Leg press, squats: 4.5-5.5 MET
-       - Lunges, step-ups: 5.0-6.0 MET
-       - Deadlifts: 5.5-6.5 MET
-       
-       COMPOUND MOVEMENTS (Highest calorie burn):
-       - Burpees, thrusters: 6.0-8.0 MET
-       - Olympic lifts: 6.5-8.5 MET
-       - Full-body circuits: 7.0-9.0 MET
-
-    2. MUSCLE GROUP ENGAGEMENT FACTOR:
-       - Single small muscle (bicep curl): Base MET
-       - Multiple small muscles (tricep dips): +20% MET
-       - Large muscle groups (leg press): +60-80% MET
-       - Multiple large muscles (squats): +100-120% MET
-       - Full body compound (deadlift): +150-200% MET
-
-    3. WEIGHT AND INTENSITY ADJUSTMENTS:
-       - Weight factor = 1.0 + (weight_lifted_kg × 0.02)
-       - Rep speed factor: Slower reps = higher calories
-         * Very slow (5+ sec/rep): +40%
-         * Slow (3-5 sec/rep): +25%
-         * Normal (2-3 sec/rep): Base
-         * Fast (<2 sec/rep): -15%
-
-    4. REST TIME LIMITATION:
-       - Rest calories = min(1.3 MET × body_weight × rest_hours, working_calories × 0.2)
-
-    5. EXAMPLES FOR REFERENCE:
-       - Bicep curls 15kg vs Leg press 100kg (same person): Leg press burns 2-3x more
-       - Tricep extensions vs Squats (same weight): Squats burn 60-80% more
-       - Isolated movements vs Compound movements: Compound burns significantly more
-
-    CALCULATION STEPS:
-    1. Identify the specific exercise and determine appropriate base MET
-    2. Apply muscle group engagement multiplier
-    3. Apply weight factor and rep speed factor
-    4. Calculate working calories using exercise-specific MET
-    5. Add minimal rest calories (capped)
+    prompt += """
+    
+    Please use exercise-specific MET values and adjust for intensity, weight, and rest as appropriate. If any field is missing, make a reasonable assumption. For cardio, ignore weight lifted and reps if not provided. For weight training, use all available data. If the user hits failure in every set or performs explosively, increase the calorie estimate accordingly.
 
     Provide response in JSON format:
-    {{
+    {
         "total_calories_burned": <number>,
         "calories_per_set": <number>,
         "total_exercise_time_seconds": <number>,
@@ -110,7 +81,7 @@ def calculate_calories_with_openai(exercise_data: ExerciseRequest) -> dict:
         "reasoning": "<explain why this exercise burns more/less calories than others and how factors were applied>",
         "exercise_category": "<small_muscle/large_muscle/compound/full_body>",
         "muscle_groups_engaged": "<list primary muscle groups>"
-    }}
+    }
     """
 
     try:
@@ -127,12 +98,10 @@ def calculate_calories_with_openai(exercise_data: ExerciseRequest) -> dict:
             max_tokens=500
         )
 
-        # Parse the response
         content = response.choices[0].message.content
-
         # Try parsing the entire content as JSON first
         try:
-            result = json.loads(content)
+            result = json.loads(content or "{}")
         except json.JSONDecodeError:
             # If that fails, extract JSON using regex
             json_match = re.search(r'\{.*\}', content or '', re.DOTALL)
@@ -140,103 +109,17 @@ def calculate_calories_with_openai(exercise_data: ExerciseRequest) -> dict:
                 json_str = json_match.group(0)
                 result = json.loads(json_str)
             else:
-                print("No valid JSON found in OpenAI response")
-                return fallback_calculation(exercise_data)
+                raise ValueError("No valid JSON found in OpenAI response")
 
         # Validate required keys
         required_keys = ["total_calories_burned", "calories_per_set", "total_exercise_time_seconds"]
         if not all(key in result for key in required_keys):
-            print("Invalid JSON format from OpenAI")
-            return fallback_calculation(exercise_data)
+            raise ValueError("Invalid JSON format from OpenAI")
 
         return result
 
     except Exception as e:
-        print(f"OpenAI API error: {e}")
-        return fallback_calculation(exercise_data)
-
-def fallback_calculation(exercise_data: ExerciseRequest) -> dict:
-    """
-    Enhanced fallback calculation with exercise-specific MET values.
-    
-    Args:
-        exercise_data (ExerciseRequest): Object containing exercise details.
-    
-    Returns:
-        dict: Calorie calculation results.
-    """
-    # Input validation
-    if exercise_data.body_weight <= 0:
-        raise ValueError("Body weight must be greater than zero")
-    if exercise_data.reps <= 0:
-        raise ValueError("Reps must be greater than zero")
-
-    # Get exercise-specific base MET
-    base_met = get_exercise_specific_met(exercise_data.exerciseName, exercise_data.exerciseType)
-
-    # Weight-based calorie adjustment
-    if exercise_data.weightLifted > 0:
-        weight_factor = 1.0 + (exercise_data.weightLifted * 0.02)  # 2% increase per kg
-        weight_ratio = exercise_data.weightLifted / exercise_data.body_weight
-        if weight_ratio > 0.5:  # If lifting more than 50% of body weight
-            weight_factor *= (1.0 + (weight_ratio - 0.5) * 0.5)  # Additional 50% boost
-    else:
-        weight_factor = 1.0
-
-    # Rep speed adjustment
-    avg_time_per_rep = exercise_data.rep_duration / exercise_data.reps
-    if avg_time_per_rep >= 5.0:
-        speed_factor = 1.4  # 40% more calories
-    elif avg_time_per_rep >= 3.0:
-        speed_factor = 1.25  # 25% more calories
-    elif avg_time_per_rep >= 2.0:
-        speed_factor = 1.0  # Base calories
-    else:
-        speed_factor = 0.85  # 15% fewer calories
-
-    # Calculate work-based MET adjustment
-    work_volume = exercise_data.reps * exercise_data.sets * max(exercise_data.weightLifted, exercise_data.body_weight * 0.1)
-    volume_factor = 1.0 + (work_volume * 0.00005)  # Small boost for high volume
-
-    # Final MET calculation
-    final_met = base_met * weight_factor * speed_factor * volume_factor
-
-    # Calculate total exercise time
-    total_working_time = exercise_data.rep_duration * exercise_data.sets
-    total_rest_time = exercise_data.restTime * (exercise_data.sets - 1) if exercise_data.sets > 1 else 0
-
-    # Rest calories (capped)
-    rest_calories_raw = (1.3 * exercise_data.body_weight * (total_rest_time / 3600))
-    working_time_hours = total_working_time / 3600
-    working_calories = final_met * exercise_data.body_weight * working_time_hours
-    max_rest_calories = working_calories * 0.2
-    rest_calories = min(rest_calories_raw, max_rest_calories)
-
-    total_calories = working_calories + rest_calories
-    calories_per_set = working_calories / exercise_data.sets if exercise_data.sets > 0 else 0
-    total_session_time = total_working_time + total_rest_time
-
-    # Determine exercise category
-    exercise_category = "unknown"
-    if base_met <= 3.2:
-        exercise_category = "small_muscle_isolation"
-    elif base_met <= 4.5:
-        exercise_category = "large_muscle_isolation"
-    elif base_met <= 6.0:
-        exercise_category = "compound_movement"
-    else:
-        exercise_category = "full_body_high_intensity"
-
-    return {
-        "total_calories_burned": round(total_calories, 2),
-        "calories_per_set": round(calories_per_set, 2),
-        "total_exercise_time_seconds": total_session_time,
-        "calculation_method": f"Exercise-specific calculation: {exercise_data.exerciseName} (Base MET: {base_met}) × Weight factor: {round(weight_factor, 2)} × Speed factor: {round(speed_factor, 2)}",
-        "metabolic_equivalent": round(final_met, 2),
-        "reasoning": f"Exercise-specific MET: {base_met} for {exercise_data.exerciseName}. Weight: {exercise_data.weightLifted}kg increases calories by {round((weight_factor-1)*100, 1)}%. Rep speed: {round(avg_time_per_rep, 1)}s/rep {'increases' if speed_factor > 1 else 'decreases'} calories by {round(abs(speed_factor-1)*100, 1)}%",
-        "exercise_category": exercise_category,
-        "muscle_groups_engaged": "Based on exercise type and movement pattern"
-    }
+        return {"error": f"OpenAI API error or invalid response: {e}"}
 
 def get_exercise_specific_met(exercise_name: str, exercise_type: str) -> float:
     """
