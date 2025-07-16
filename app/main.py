@@ -8,6 +8,7 @@ import uuid
 import asyncio
 from typing import Dict, Optional
 from fastapi.middleware.cors import CORSMiddleware
+from app.config.settings import OPENAI_API_KEY, OPENAI_API_URL
 
 load_dotenv()
 
@@ -20,9 +21,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load Groq API key from environment variables
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+# Load OpenAI API key from environment variables
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 
 # In-memory storage for responses (simulating database)
 response_storage = {}
@@ -264,37 +265,37 @@ def build_analysis_prompt(user_feedback: str, original_response: str, rating: st
             🗣 User Feedback: **\"{comment}\"\"\"
             """
 
-async def call_groq(prompt: str) -> str:
-    if not GROQ_API_KEY:
-        raise HTTPException(status_code=400, detail="Groq API key not configured")
+async def call_openai(prompt: str) -> str:
+    if not OPENAI_API_KEY:
+        raise HTTPException(status_code=400, detail="OpenAI API key not configured")
 
     headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Authorization": f"Bearer {OPENAI_API_KEY}",
         "Content-Type": "application/json"
     }
 
     data = {
-        "model": "llama-3.3-70b-versatile",
+        "model": "gpt-3.5-turbo",
         "messages": [{"role": "user", "content": prompt}],
-        "max_completion_tokens": 300,
-        "temperature": 0.3,
+        "max_tokens": 1000,
+        "temperature": 0.2,
         "stop": ["---"]
-    }
+            }
 
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.post(GROQ_API_URL, headers=headers, json=data, timeout=15)
+            response = await client.post(OPENAI_API_URL, headers=headers, json=data, timeout=15)
             response.raise_for_status()
         except httpx.HTTPError as e:
-            raise HTTPException(status_code=500, detail=f"Groq API request failed: {e}")
+            raise HTTPException(status_code=500, detail=f"OpenAI API request failed: {e}")
 
         try:
             result_json = response.json()
             if not result_json.get("choices") or not result_json["choices"][0].get("message"):
-                raise HTTPException(status_code=500, detail="Invalid response structure from Groq API")
+                raise HTTPException(status_code=500, detail="Invalid response structure from OpenAI API")
             return result_json["choices"][0]["message"]["content"].strip()
         except (KeyError, IndexError) as e:
-            raise HTTPException(status_code=500, detail=f"Failed to parse Groq API response: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to parse OpenAI API response: {e}")
 
 @app.post("/generate-response", response_model=FeedbackResponse)
 async def generate_response(feedback: Feedback):
@@ -326,7 +327,7 @@ async def generate_response(feedback: Feedback):
 
     # Generate AI response
     response_prompt = build_response_prompt(feedback.user_feedback, session.get_history())
-    ai_response = await call_groq(response_prompt)
+    ai_response = await call_openai(response_prompt)
     
     # Add AI response to history
     if not session.add_message("assistant", ai_response):
@@ -373,7 +374,7 @@ async def rate_response(rating: Rating):
             rating.rating,
             comment
         )
-        improved_response = await call_groq(improved_prompt)
+        improved_response = await call_openai(improved_prompt)
         # Analyze feedback
         analysis_prompt = build_analysis_prompt(
             response_data["user_feedback"],
@@ -381,7 +382,7 @@ async def rate_response(rating: Rating):
             rating.rating,
             comment
         )
-        llm_analysis = await call_groq(analysis_prompt)
+        llm_analysis = await call_openai(analysis_prompt)
         status = "reviewed"
         locked = True  # Lock after generating improved response
     else:
@@ -392,7 +393,7 @@ async def rate_response(rating: Rating):
             rating.rating,
             comment
         )
-        llm_analysis = await call_groq(analysis_prompt)
+        llm_analysis = await call_openai(analysis_prompt)
         locked = True  # Lock after rating as "Helpful"
 
     # Update in-memory storage

@@ -4,6 +4,8 @@ import uuid
 from app.models.schemas import Feedback, Rating, FeedbackResponse, RatedFeedbackResponse
 from app.services.session_manager import session_manager
 from app.services.llm_service import llm_service
+from app.config.settings import OPENAI_API_KEY, OPENAI_API_URL
+from app.services.session_manager import session_manage
 
 router = APIRouter()
 

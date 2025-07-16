@@ -48,14 +48,14 @@ def calculate_calories_with_openai(exercise_data: Dict[str, Any]) -> dict:
 
     User Information:
     - Body weight: {user_weight} kg
-    - Height: {user_height} cm
+    - Height: {user_height} feet.inches (convert to cm)
 
     Exercise Details:
     - Exercise: {exercise_name}
     - Type: {exercise_type}
     """
     if weight_lifted:
-        prompt += f"- Weight lifted: {weight_lifted} kg\n"
+        prompt += f"- Weight lifted: {weight_lifted} lb\n"
     if reps:
         prompt += f"- Repetitions: {reps}\n"
     if sets:
@@ -121,45 +121,5 @@ def calculate_calories_with_openai(exercise_data: Dict[str, Any]) -> dict:
     except Exception as e:
         return {"error": f"OpenAI API error or invalid response: {e}"}
 
-def get_exercise_specific_met(exercise_name: str, exercise_type: str) -> float:
-    """
-    Get exercise-specific MET values based on muscle groups engaged.
-    
-    Args:
-        exercise_name (str): Name of the exercise.
-        exercise_type (str): Type of the exercise (e.g., cardio, strength).
-    
-    Returns:
-        float: MET value for the exercise.
-    """
-    exercise_lower = exercise_name.lower()
-
-    # Exercise-specific MET database
-    exercise_mets = {
-        'bicep curl': 2.8, 'bicep curls': 2.8, 'tricep extension': 2.8, 'tricep curls': 2.8,
-        'lateral raise': 3.0, 'shoulder raise': 3.0, 'chest fly': 3.2, 'hammer curl': 2.8,
-        'bench press': 3.8, 'push up': 3.8, 'pushup': 3.8, 'pull up': 4.2, 'pullup': 4.2,
-        'row': 3.5, 'rowing': 3.5, 'shoulder press': 3.5, 'military press': 3.8, 'chest press': 3.8,
-        'squat': 5.0, 'squats': 5.0, 'leg press': 4.8, 'lunge': 5.2, 'lunges': 5.2,
-        'leg curl': 3.5, 'leg extension': 3.5, 'calf raise': 3.0, 'leg raise': 4.0,
-        'deadlift': 6.0, 'deadlifts': 6.0, 'clean': 6.5, 'snatch': 7.0, 'thruster': 6.8,
-        'burpee': 7.5, 'burpees': 7.5, 'mountain climber': 7.0, 'jumping jack': 6.5,
-        'kettlebell swing': 6.0, 'battle rope': 7.2, 'box jump': 6.8
-    }
-
-    # Try exact match
-    if exercise_lower in exercise_mets:
-        return exercise_mets[exercise_lower]
-
-    # Try partial matching
-    for exercise_key, met_value in exercise_mets.items():
-        if exercise_key in exercise_lower or any(word in exercise_lower for word in exercise_key.split()):
-            return met_value
-
-    # Fallback to exercise type
-    type_mets = {
-        'cardio': 6.0, 'strength': 3.5, 'weightlifting': 3.5, 'resistance': 3.5,
-        'compound': 5.5, 'isolation': 3.0
-    }
-    return type_mets.get(exercise_type.lower(), 4.0)
+# Removed get_exercise_specific_met and all manual calculation logic. All calculation is now handled by OpenAI only.
 

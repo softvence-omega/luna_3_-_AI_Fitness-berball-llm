@@ -9,6 +9,7 @@ app/main.py
 app/api/__init__.py
 app/api/endpoints.py
 app/api/nutrition_router.py
+app/api/workout_calorie_calculation.py
 app/api/workout_router.py
 app/config/__init__.py
 app/config/settings.py
@@ -21,4 +22,5 @@ app/services/__init__.py
 app/services/llm_service.py
 app/services/nutrition_service.py
 app/services/session_manager.py
+app/services/workout_calorie_burn_calculation.py
 app/services/workout_service.py

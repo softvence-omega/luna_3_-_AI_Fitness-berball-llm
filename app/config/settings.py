@@ -4,8 +4,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # API Configuration
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 
 # Session Configuration
 SESSION_TIMEOUT = 3600  

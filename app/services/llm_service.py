@@ -1,40 +1,44 @@
 import httpx
 from fastapi import HTTPException
-from app.config.settings import GROQ_API_KEY, GROQ_API_URL
+from app.config.settings import OPENAI_API_KEY, OPENAI_API_URL
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class LLMService:
     def __init__(self):
-        if not GROQ_API_KEY:
-            raise ValueError("Groq API key not configured")
+        if not OPENAI_API_KEY:
+            raise ValueError("OpenAI API key not configured")
 
     async def generate_response(self, prompt: str) -> str:
         headers = {
-            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Authorization": f"Bearer {OPENAI_API_KEY}",
             "Content-Type": "application/json"
         }
+        print(OPENAI_API_KEY)
 
         data = {
-            "model": "llama-3.3-70b-versatile",
+            "model": "gpt-3.5-turbo",
             "messages": [{"role": "user", "content": prompt}],
-            "max_completion_tokens": 300,
-            "temperature": 0.3,
+            "max_tokens": 1000,
+            "temperature": 0.2,
             "stop": ["---"]
-        }
+             }
 
         async with httpx.AsyncClient() as client:
             try:
-                response = await client.post(GROQ_API_URL, headers=headers, json=data, timeout=15)
+                response = await client.post(OPENAI_API_URL, headers=headers, json=data, timeout=15)
                 response.raise_for_status()
             except httpx.HTTPError as e:
-                raise HTTPException(status_code=500, detail=f"Groq API request failed: {e}")
+                raise HTTPException(status_code=500, detail=f"OpenAI API request failed: {e}")
 
             try:
                 result_json = response.json()
                 if not result_json.get("choices") or not result_json["choices"][0].get("message"):
-                    raise HTTPException(status_code=500, detail="Invalid response structure from Groq API")
+                    raise HTTPException(status_code=500, detail="Invalid response structure from OpenAI API")
                 return result_json["choices"][0]["message"]["content"].strip()
             except (KeyError, IndexError) as e:
-                raise HTTPException(status_code=500, detail=f"Failed to parse Groq API response: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to parse OpenAI API response: {e}")
 
     def build_response_prompt(self, user_feedback: str, chat_history=None) -> str:
         if chat_history is None:
