@@ -4,10 +4,9 @@ cachetools==5.5.2
 certifi==2025.6.15
 charset-normalizer==3.4.2
 click==8.2.1
-distro==1.9.0
 fastapi==0.115.12
 filetype==1.2.0
-google-ai-generativelanguage==0.6.15
+google-ai-generativelanguage==0.6.18
 google-api-core==2.25.1
 google-auth==2.40.3
 googleapis-common-protos==1.70.0
@@ -47,3 +46,6 @@ typing_extensions==4.14.0
 urllib3==2.4.0
 uvicorn==0.34.3
 zstandard==0.23.0
+gunicorn
+langchain-openai
+-e .

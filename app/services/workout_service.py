@@ -1,15 +1,21 @@
 
-
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain.output_parsers import PydanticOutputParser
+from langchain_openai import ChatOpenAI
+from app.models.workout_schema import WorkoutPlanRequest, WorkoutUpdateRequest, WorkoutPlan
 
-from models.workout_schema import WorkoutPlanRequest, WorkoutUpdateRequest, WorkoutPlan, WorkoutPlanResponse
 
-
-llm = ChatGoogleGenerativeAI(
-    model="gemini-2.0-flash",
-    temperature=0.7, 
+# llm = ChatGoogleGenerativeAI(
+#     model="gemini-2.0-flash",
+#     temperature=0.7, 
+# )
+llm = ChatOpenAI(
+    model="gpt-4o",
+    temperature=0.2,
+    max_tokens=None,
+    timeout=None,
+    max_retries=2,
 )
 
 
