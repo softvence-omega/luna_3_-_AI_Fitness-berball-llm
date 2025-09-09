@@ -21,7 +21,6 @@ async def create_workout_plan(request: WorkoutPlanRequest):
         workout_plan = await workout_service.generate_workout_plan(request)
         return workout_plan
     except Exception as e:
-        # In a production environment, you would log the error `e`
         raise HTTPException(status_code=500, detail=f"Failed to create workout plan: {e}")
 
 @router.post("/update-workout-plan", response_model=WorkoutPlanResponse)
@@ -36,5 +35,4 @@ async def update_workout_plan(request: WorkoutUpdateRequest):
         updated_plan = await workout_service.refine_workout_plan(request)
         return updated_plan
     except Exception as e:
-        # In a production environment, you would log the error `e`
         raise HTTPException(status_code=500, detail=f"Failed to update workout plan: {e}")

@@ -1,15 +1,40 @@
-from app.models.workout_schema import ExerciseRequest, CalorieResponse
-# import groq
-import json
 import os
-from datetime import datetime
-import dotenv
-# NOTE: Ensure the 'openai' package is installed in your environment: pip install openai
+from dotenv import load_dotenv
 import openai
-import re
-from typing import Dict, Any
+from typing import Dict, Any, Literal, List
+from langchain.output_parsers import  PydanticOutputParser
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
+from pydantic import BaseModel, Field
 
-dotenv.load_dotenv()
+load_dotenv()
+
+
+
+class ExerciseCalorieResponse(BaseModel):
+    total_calories_burned: float = Field(..., description="Total calories burned during the exercise session")
+    calories_per_set: float = Field(..., description="Calories burned per set of the exercise")
+    total_exercise_time_seconds: int = Field(..., description="Total duration of the exercise in seconds")
+    calculation_method: str = Field(..., description="Explanation of how MET and muscle group factors were used in the calculation")
+    metabolic_equivalent: float = Field(..., description="Final MET value specific to the exercise")
+    reasoning: str = Field(..., description="Explanation of why this exercise burns more or fewer calories compared to others")
+    exercise_category: Literal["small_muscle", "large_muscle", "compound", "full_body"] = Field(..., description="Category of the exercise based on muscle engagement")
+    muscle_groups_engaged: List[str] = Field(..., description="List of primary muscle groups targeted by the exercise")
+
+
+llm = ChatOpenAI(
+    model="gpt-3.5-turbo",
+    temperature=0.4,
+    max_tokens=None,
+    timeout=None,
+    max_retries=2,
+    api_key=os.getenv("OPENAI_API_KEY")
+)
+
+output_parser = PydanticOutputParser(pydantic_object = ExerciseCalorieResponse) 
+format_instructions = output_parser.get_format_instructions()
+
+
 
 # OpenAI client setup
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -67,59 +92,38 @@ def calculate_calories_with_openai(exercise_data: Dict[str, Any]) -> dict:
     if exercise_description:
         prompt += f"- Additional info: {exercise_description}\n"
 
-    prompt += """
-    
+    prompt += f"""
+
     Please use exercise-specific MET values and adjust for intensity, weight, and rest as appropriate. If any field is missing, make a reasonable assumption. For cardio, ignore weight lifted and reps if not provided. For weight training, use all available data. If the user hits failure in every set or performs explosively, increase the calorie estimate accordingly.
 
     Provide response in JSON format:
-    {
-        "total_calories_burned": <number>,
-        "calories_per_set": <number>,
-        "total_exercise_time_seconds": <number>,
-        "calculation_method": "<explain exercise-specific MET and muscle group factors>",
-        "metabolic_equivalent": <final exercise-specific MET>,
-        "reasoning": "<explain why this exercise burns more/less calories than others and how factors were applied>",
-        "exercise_category": "<small_muscle/large_muscle/compound/full_body>",
-        "muscle_groups_engaged": "<list primary muscle groups>"
-    }
+
+    {format_instructions}
+
     """
-
     try:
-        response = openai.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a fitness expert specializing in calorie calculations. Provide accurate, science-based calorie burn estimates using MET values and established formulas."
-                },
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.3,
-            max_tokens=500
-        )
+        messages = [
+        SystemMessage(content="You are a fitness expert specializing in calorie calculations. Provide accurate, science-based calorie burn estimates using MET values and established formulas."),
+        HumanMessage(content=[
+            {"type": "text", "text": prompt}
+        ])
+    ]
+        response = llm.invoke(messages)
+        parsed_response = output_parser.parse(response.content)
 
-        content = response.choices[0].message.content
-        # Try parsing the entire content as JSON first
-        try:
-            result = json.loads(content or "{}")
-        except json.JSONDecodeError:
-            # If that fails, extract JSON using regex
-            json_match = re.search(r'\{.*\}', content or '', re.DOTALL)
-            if json_match:
-                json_str = json_match.group(0)
-                result = json.loads(json_str)
-            else:
-                raise ValueError("No valid JSON found in OpenAI response")
 
-        # Validate required keys
-        required_keys = ["total_calories_burned", "calories_per_set", "total_exercise_time_seconds"]
-        if not all(key in result for key in required_keys):
-            raise ValueError("Invalid JSON format from OpenAI")
-
-        return result
+        return {
+            "total_calories_burned": parsed_response.total_calories_burned,
+            "calories_per_set": parsed_response.calories_per_set,
+            "total_exercise_time_seconds": parsed_response.total_exercise_time_seconds,
+            "calculation_method": parsed_response.calculation_method,
+            "metabolic_equivalent": parsed_response.metabolic_equivalent,
+            "reasoning": parsed_response.reasoning,
+            "exercise_category": parsed_response.exercise_category,
+            "muscle_groups_engaged": parsed_response.muscle_groups_engaged
+            }
 
     except Exception as e:
         return {"error": f"OpenAI API error or invalid response: {e}"}
 
-# Removed get_exercise_specific_met and all manual calculation logic. All calculation is now handled by OpenAI only.
 

@@ -54,23 +54,19 @@ class WorkoutUpdateRequest(BaseModel):
     feedback: str = Field(..., description="User's feedback on the plan.", example="The leg day was too intense. Can we reduce the volume a bit? Also, I'd like to add more focus on my biceps.")
 
 class ExerciseRequest(BaseModel):
-    body_weight: float = Field(..., description="Body weight in kg", gt=0)
-    height: float = Field(..., description="Height in feet", gt=0)
-    exerciseName: str = Field(..., description="Name of the exercise")
-    exerciseType: str = Field(..., description="Type of exercise (cardio, strength, etc.)")
-    exerciseDescription: str = Field(..., description="Description of the exercise")
-    resetTime: float = Field(..., description="Time to complete all reps in seconds", gt=0)
-    weightLifted: float = Field(default=0, description="Weight lifted in kg")
-    reps: int = Field(..., description="Number of repetitions", gt=0)
-    # rep_duration: float = Field(..., description="Time to complete all reps in seconds", gt=0)
-    sets: int = Field(..., description="Number of sets", gt=0)
-    restTime: float = Field(..., description="Rest time between sets in seconds", ge=0)
+    body_weight: float = Field(..., description="Body weight in kg", gt=0, example=70)
+    height: float = Field(..., description="Height in centimeters", gt=0, example=175)
+    exerciseName: str = Field(..., description="Name of the exercise", example="Dumble Ton")
+    exerciseType: str = Field(..., description="Type of exercise (cardio, strength, etc.)", example="weight_training")
+    exerciseDescription: str = Field(..., description="Description of the exercise", example="great exercise")
+    resetTime: float = Field(..., description="Time to complete all reps in seconds", gt=0, example=30)
+    weightLifted: float = Field( description="Weight lifted in kg", example=20)
+    reps: int = Field(..., description="Number of repetitions", gt=0, example=12)
+    sets: int = Field(..., description="Number of sets", gt=0, example=3)
+    restTime: float = Field(..., description="Rest time between sets in seconds", ge=0, example=20)
 
 
 class CalorieResponse(BaseModel):
     total_calories_burned: float
-    # calories_per_set: float
-    # total_exercise_time: float
     exercise_details: dict
-    # calculation_method: str
-    # timestamp: datetime
+

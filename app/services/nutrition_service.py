@@ -1,34 +1,21 @@
 import base64
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain.output_parsers import ResponseSchema, StructuredOutputParser, PydanticOutputParser
+from langchain.output_parsers import  PydanticOutputParser
 from app.models.nutrition_schema import NutritionResponse
 from langchain_openai import ChatOpenAI
+from app.config.settings import OPENAI_API_KEY
 
-# llm = ChatGoogleGenerativeAI(
-#     model="gemini-2.0-flash", 
-#     temperature=0.2,
-#     max_tokens=None,
-#     timeout=None,
-#     max_retries=2,
-# )
+
 llm = ChatOpenAI(
     model="gpt-4o",
     temperature=0.2,
     max_tokens=None,
     timeout=None,
     max_retries=2,
+    api_key=OPENAI_API_KEY
 )
 
 
-response_schemas = [
-    ResponseSchema(name="total_protein_g", description="Total protein in grams, (e.g. 140, 35, 10)"),
-    ResponseSchema(name="total_carbs_g", description="Total carbohydrates in grams, (e.g. 240, 80)"),
-    ResponseSchema(name="total_fats_g", description="Total fats in grams, (e.g., 120, 30, 35)"),
-    ResponseSchema(name="total_fiber_g", description="Total fiber in grams, (e.g., 15, 5, 20)")
-]
-
-output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
 output_parser = PydanticOutputParser(pydantic_object = NutritionResponse) 
 format_instructions = output_parser.get_format_instructions()
 
@@ -46,16 +33,6 @@ async def get_nutritional_analysis(image_bytes: bytes) -> dict:
 
     image_data = base64.b64encode(image_bytes).decode("utf-8")
     data_uri = f"data:image/jpeg;base64,{image_data}"
-
-    user_prompt = f"""
-                    You are a world-class nutrition expert. Your task is to analyze
-                    the attached image of a meal with extreme accuracy.
-
-                    Provide a detailed nutritional breakdown based *only* on the contents
-                    of the image.
-
-                    {format_instructions}
-                """
     
     user_prompt = f"""
         You are a world-class nutrition expert with expertise in visual food analysis. Your task is to analyze the attached image of a meal with high accuracy and provide a nutritional breakdown for the **entire meal** shown in the image. Do **not** provide per-serving values; calculate totals for all visible food.
@@ -89,7 +66,6 @@ async def get_nutritional_analysis(image_bytes: bytes) -> dict:
     response = llm.invoke(messages)
     parsed_response = output_parser.parse(response.content)
 
-    print(parsed_response)
 
 
     protein_g = int(parsed_response.total_protein_g)
