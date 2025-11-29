@@ -4,6 +4,7 @@ from langchain.output_parsers import PydanticOutputParser
 from langchain_openai import ChatOpenAI
 from app.models.workout_schema import WorkoutPlanRequest, WorkoutUpdateRequest, WorkoutPlan
 
+from app.config.settings import OPENAI_API_KEY
 
 llm = ChatOpenAI(
     model="gpt-4o",
@@ -11,6 +12,7 @@ llm = ChatOpenAI(
     max_tokens=None,
     timeout=None,
     max_retries=2,
+    api_key=OPENAI_API_KEY
 )
 
 

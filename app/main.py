@@ -8,6 +8,7 @@ import uuid
 import asyncio
 from typing import Dict, Optional
 from fastapi.middleware.cors import CORSMiddleware
+from app.api.mealplan_router import router as mealplan_router
 from app.config.settings import OPENAI_API_KEY, OPENAI_API_URL
 
 load_dotenv()
@@ -417,4 +418,6 @@ from app.api.reciept import router as reciept_router
 app.include_router(nutrition_router)
 app.include_router(workout_router)
 app.include_router(workout_calorie_calculation_router)
-app.include_router(reciept_router, prefix="/reciept", tags=["Receipt Scanner"])
+app.include_router(reciept_router, prefix="/receipt", tags=["Receipt Scanner"])
+app.include_router(mealplan_router)
+
