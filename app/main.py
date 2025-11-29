@@ -418,6 +418,7 @@ from app.api.reciept import router as reciept_router
 app.include_router(nutrition_router)
 app.include_router(workout_router)
 app.include_router(workout_calorie_calculation_router)
+
 app.include_router(reciept_router, prefix="/receipt", tags=["Receipt Scanner"])
-app.include_router(mealplan_router)
+app.include_router(mealplan_router, tags=["MealPlan"])
 

@@ -50,101 +50,105 @@ async def get_nutritional_analysis(image_bytes: bytes) -> dict:
     7. Do not include a detailed explanation or analysis field in the output; only provide the structured nutritional totals.
     8. If the picture does not contain any food then return default values (set 0 (zero) as their default value for macronutrients and an empty array for micronutrients).
 
-    **Output Example**:
-    {{
-        "total_protein_g": "40",
-        "total_carbs_g": "50",
-        "total_fats_g": "16",
-        "total_fiber_g": "5",
-        "micro_nutrients": [
-            {{
-                "name": "Vitamin A",
-                "amount": "500 mcg"
-            }},
-            {{
-                "name": "Vitamin C",
-                "amount": "25 mg"
-            }},
-            {{
-                "name": "Vitamin D",
-                "amount": "2 mcg"
-            }},
-            {{
-                "name": "Vitamin E",
-                "amount": "1.5 mg"
-            }},
-            {{
-                "name": "Vitamin K",
-                "amount": "15 mcg"
-            }},
-            {{
-                "name": "Vitamin B1 (Thiamine)",
-                "amount": "0.3 mg"
-            }},
-            {{
-                "name": "Vitamin B2 (Riboflavin)",
-                "amount": "0.4 mg"
-            }},
-            {{
-                "name": "Vitamin B3 (Niacin)",
-                "amount": "8 mg"
-            }},
-            {{
-                "name": "Vitamin B6 (Pyridoxine)",
-                "amount": "0.5 mg"
-            }},
-            {{
-                "name": "Vitamin B9 (Folate)",
-                "amount": "80 mcg"
-            }},
-            {{
-                "name": "Vitamin B12 (Cobalamin)",
-                "amount": "1.2 mcg"
-            }},
-            {{
-                "name": "Calcium",
-                "amount": "150 mg"
-            }},
-            {{
-                "name": "Iron",
-                "amount": "3.5 mg"
-            }},
-            {{
-                "name": "Magnesium",
-                "amount": "80 mg"
-            }},
-            {{
-                "name": "Phosphorus",
-                "amount": "250 mg"
-            }},
-            {{
-                "name": "Potassium",
-                "amount": "600 mg"
-            }},
-            {{
-                "name": "Sodium",
-                "amount": "400 mg"
-            }},
-            {{
-                "name": "Zinc",
-                "amount": "4 mg"
-            }},
-            {{
-                "name": "Copper",
-                "amount": "0.5 mg"
-            }},
-            {{
-                "name": "Manganese",
-                "amount": "1 mg"
-            }},
-            {{
-                "name": "Selenium",
-                "amount": "30 mcg"
-            }}
-        ],
-        "total_calories": "520"
-    }}
+
     {format_instructions}
+    """
+
+    """
+        # **Output Example**:
+    # {{
+    #     "total_protein_g": "40",
+    #     "total_carbs_g": "50",
+    #     "total_fats_g": "16",
+    #     "total_fiber_g": "5",
+    #     "micro_nutrients": [
+    #         {{
+    #             "name": "Vitamin A",
+    #             "amount": "500 mcg"
+    #         }},
+    #         {{
+    #             "name": "Vitamin C",
+    #             "amount": "25 mg"
+    #         }},
+    #         {{
+    #             "name": "Vitamin D",
+    #             "amount": "2 mcg"
+    #         }},
+    #         {{
+    #             "name": "Vitamin E",
+    #             "amount": "1.5 mg"
+    #         }},
+    #         {{
+    #             "name": "Vitamin K",
+    #             "amount": "15 mcg"
+    #         }},
+    #         {{
+    #             "name": "Vitamin B1 (Thiamine)",
+    #             "amount": "0.3 mg"
+    #         }},
+    #         {{
+    #             "name": "Vitamin B2 (Riboflavin)",
+    #             "amount": "0.4 mg"
+    #         }},
+    #         {{
+    #             "name": "Vitamin B3 (Niacin)",
+    #             "amount": "8 mg"
+    #         }},
+    #         {{
+    #             "name": "Vitamin B6 (Pyridoxine)",
+    #             "amount": "0.5 mg"
+    #         }},
+    #         {{
+    #             "name": "Vitamin B9 (Folate)",
+    #             "amount": "80 mcg"
+    #         }},
+    #         {{
+    #             "name": "Vitamin B12 (Cobalamin)",
+    #             "amount": "1.2 mcg"
+    #         }},
+    #         {{
+    #             "name": "Calcium",
+    #             "amount": "150 mg"
+    #         }},
+    #         {{
+    #             "name": "Iron",
+    #             "amount": "3.5 mg"
+    #         }},
+    #         {{
+    #             "name": "Magnesium",
+    #             "amount": "80 mg"
+    #         }},
+    #         {{
+    #             "name": "Phosphorus",
+    #             "amount": "250 mg"
+    #         }},
+    #         {{
+    #             "name": "Potassium",
+    #             "amount": "600 mg"
+    #         }},
+    #         {{
+    #             "name": "Sodium",
+    #             "amount": "400 mg"
+    #         }},
+    #         {{
+    #             "name": "Zinc",
+    #             "amount": "4 mg"
+    #         }},
+    #         {{
+    #             "name": "Copper",
+    #             "amount": "0.5 mg"
+    #         }},
+    #         {{
+    #             "name": "Manganese",
+    #             "amount": "1 mg"
+    #         }},
+    #         {{
+    #             "name": "Selenium",
+    #             "amount": "30 mcg"
+    #         }}
+    #     ],
+    #     "total_calories": "520"
+    # }}
     """
     messages = [
         SystemMessage(content="You are an AI nutritionist specializing in analyzing food images to provide accurate nutritional information."),

@@ -1,0 +1,203 @@
+{
+  "user_id": "12",
+  "receipts": [
+    {
+      "store_name": "Walmart",
+      "receipt_date": "11/06/11",
+      "categories": [
+        {
+          "category_name": "Bakery",
+          "products": [
+            {
+              "name": "Bread",
+              "cost": "2.88",
+              "quantity": "1",
+              "total_cost": "2.88"
+            },
+            {
+              "name": "Bread",
+              "cost": "2.88",
+              "quantity": "1",
+              "total_cost": "2.88"
+            }
+          ],
+          "total_price": "5.76"
+        },
+        {
+          "category_name": "Other / Miscellaneous",
+          "products": [
+            {
+              "name": "12 CT Nitril",
+              "cost": "2.78",
+              "quantity": "1",
+              "total_cost": "2.78"
+            }
+          ],
+          "total_price": "2.78"
+        },
+        {
+          "category_name": "Beverages",
+          "products": [
+            {
+              "name": "Folgers",
+              "cost": "10.48",
+              "quantity": "1",
+              "total_cost": "10.48"
+            },
+            {
+              "name": "SC Twist Up",
+              "cost": "0.84",
+              "quantity": "1",
+              "total_cost": "0.84"
+            }
+          ],
+          "total_price": "11.32"
+        },
+        {
+          "category_name": "Other / Miscellaneous",
+          "products": [
+            {
+              "name": "GV Pnt Buttr",
+              "cost": "3.84",
+              "quantity": "4",
+              "total_cost": "15.36"
+            },
+            {
+              "name": "GV Parm 16oz",
+              "cost": "4.98",
+              "quantity": "1",
+              "total_cost": "4.98"
+            },
+            {
+              "name": "GV Chnk Chkn",
+              "cost": "1.98",
+              "quantity": "2",
+              "total_cost": "3.96"
+            },
+            {
+              "name": "Eggs",
+              "cost": "1.88",
+              "quantity": "1",
+              "total_cost": "1.88"
+            }
+          ],
+          "total_price": "26.18"
+        }
+      ],
+      "grand_total": "46.30",
+      "tax_amount": "0.26",
+      "subtotal": "46.04",
+      "user_id": "12",
+      "scan_timestamp": "2025-11-29T17:41:18.610010",
+      "image_path": "temp_Detailed-Grocery-Payment-Receipt-Samples.jpg"
+    },
+    {
+      "store_name": "Walmart",
+      "receipt_date": "2011-11-06",
+      "categories": [
+        {
+          "category_name": "Bakery",
+          "products": [
+            {
+              "name": "BREAD",
+              "cost": "2.88",
+              "quantity": "1",
+              "total_cost": "2.88"
+            },
+            {
+              "name": "BREAD",
+              "cost": "2.88",
+              "quantity": "1",
+              "total_cost": "2.88"
+            }
+          ],
+          "total_price": "5.76"
+        },
+        {
+          "category_name": "Dairy",
+          "products": [
+            {
+              "name": "GV PARM 16OZ",
+              "cost": "4.98",
+              "quantity": "1",
+              "total_cost": "4.98"
+            }
+          ],
+          "total_price": "4.98"
+        },
+        {
+          "category_name": "Snacks & Packaged Foods",
+          "products": [
+            {
+              "name": "GV PNT BUTTR",
+              "cost": "3.84",
+              "quantity": "4",
+              "total_cost": "15.36"
+            },
+            {
+              "name": "GV CHNK CHKN",
+              "cost": "1.98",
+              "quantity": "2",
+              "total_cost": "3.96"
+            },
+            {
+              "name": "GV CHNK CHKN",
+              "cost": "1.98",
+              "quantity": "1",
+              "total_cost": "1.98"
+            },
+            {
+              "name": "SC TWIST UP",
+              "cost": "0.84",
+              "quantity": "1",
+              "total_cost": "0.84"
+            }
+          ],
+          "total_price": "22.14"
+        },
+        {
+          "category_name": "Other / Miscellaneous",
+          "products": [
+            {
+              "name": "12 CT NITRIL",
+              "cost": "2.78",
+              "quantity": "1",
+              "total_cost": "2.78"
+            }
+          ],
+          "total_price": "2.78"
+        },
+        {
+          "category_name": "Beverages",
+          "products": [
+            {
+              "name": "FOLGERS",
+              "cost": "10.48",
+              "quantity": "1",
+              "total_cost": "10.48"
+            }
+          ],
+          "total_price": "10.48"
+        },
+        {
+          "category_name": "Other / Miscellaneous",
+          "products": [
+            {
+              "name": "EGGS",
+              "cost": "1.88",
+              "quantity": "1",
+              "total_cost": "1.88"
+            }
+          ],
+          "total_price": "1.88"
+        }
+      ],
+      "grand_total": "46.30",
+      "tax_amount": "0.26",
+      "subtotal": "46.04",
+      "user_id": "12",
+      "scan_timestamp": "2025-11-29T17:46:20.483550",
+      "image_path": "temp_Detailed-Grocery-Payment-Receipt-Samples.jpg"
+    }
+  ]
+}

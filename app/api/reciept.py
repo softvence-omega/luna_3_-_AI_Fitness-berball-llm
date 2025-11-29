@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, UploadFile
 from app.services.receipt_scanner import ReceiptScanner
 
@@ -11,6 +12,7 @@ async def scan_receipt(user_id: str, file: UploadFile):
         f.write(await file.read())
 
     data = scanner.scan_receipt(path, user_id)
+    os.remove(path)
     return {"status": "success", "data": data}
 
 
