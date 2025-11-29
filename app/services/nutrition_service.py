@@ -48,10 +48,17 @@ async def get_nutritional_analysis(image_bytes: bytes) -> dict:
 
         **Output Example**:
         {{
-            "total_protein_g": 40,
-            "total_carbs_g": 50,
-            "total_fats_g": 16,
-            "total_fiber_g": 5,
+            "total_protein_g": "40",
+            "total_carbs_g": "50",
+            "total_fats_g": "16",
+            "total_fiber_g": "5",
+            "micro_nutrients": [
+                {{
+                    "name": "micronutrient_1",
+                    "amount": "amount_1"
+                }}
+            ],
+            "total_calories": "520"
         }}
         {format_instructions}
         """
