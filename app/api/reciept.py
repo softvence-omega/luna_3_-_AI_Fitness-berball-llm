@@ -15,7 +15,3 @@ async def scan_receipt(user_id: str, file: UploadFile):
     os.remove(path)
     return {"status": "success", "data": data}
 
-
-@router.get("/user/{user_id}/receipts")
-def get_receipts(user_id: str):
-    return scanner.get_user_receipts(user_id)

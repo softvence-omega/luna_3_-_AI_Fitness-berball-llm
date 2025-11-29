@@ -10,7 +10,6 @@ class DietaryPreferences(BaseModel):
     restrictions: List[str] = []  # e.g., ["halal", "gluten-free"]
 
 class UserProfile(BaseModel):
-    user_id: Optional[str] = None  # Using string instead of ObjectId for API responses
     age: int
     gender: str  # "male" or "female"
     weight_kg: float

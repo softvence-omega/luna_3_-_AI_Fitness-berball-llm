@@ -1,5 +1,4 @@
 import base64
-import json
 from enum import Enum
 from typing import List
 from datetime import datetime
@@ -7,54 +6,12 @@ from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
 from pydantic import BaseModel, Field
-from datetime import datetime, timedelta
-from collections import defaultdict
 from app.config import settings
 
 load_dotenv()
 
 
-# ─────────────────────────────────────────────────────────────
-# ENUM: Categories
-# ─────────────────────────────────────────────────────────────
-class FoodCategory(str, Enum):
-    FRUITS = "Fruits"
-    VEGETABLES = "Vegetables"
-    DAIRY = "Dairy"
-    MEAT_POULTRY = "Meat & Poultry"
-    FISH_SEAFOOD = "Fish & Seafood"
-    GRAINS_CEREALS = "Grains & Cereals"
-    SNACKS_PACKAGED = "Snacks & Packaged Foods"
-    BEVERAGES = "Beverages"
-    FROZEN_FOODS = "Frozen Foods"
-    BAKERY = "Bakery"
-    CONDIMENTS_SPICES = "Condiments & Spices"
-    OTHER = "Other / Miscellaneous"
-
-
-# ─────────────────────────────────────────────────────────────
-# Pydantic Models
-# ─────────────────────────────────────────────────────────────
-class Product(BaseModel):
-    name: str
-    cost: str
-    quantity: str
-    total_cost: str
-
-
-class Category(BaseModel):
-    category_name: FoodCategory
-    products: List[Product] = Field(default_factory=list)
-    total_price: str
-
-
-class ReceiptAnalysisResponse(BaseModel):
-    store_name: str = "Unknown"
-    receipt_date: str = "Unknown"
-    categories: List[Category]
-    grand_total: str
-    tax_amount: str = "0.00"
-    subtotal: str = "0.00"
+from app.models.reciept_schema import ReceiptAnalysisResponse
 
 
 # ─────────────────────────────────────────────────────────────
@@ -86,10 +43,10 @@ class ReceiptScanner:
         if not settings.OPENAI_API_KEY:
             raise ValueError("OPENAI_API_KEY missing")
 
-        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        self.model = "gpt-4o-mini"
-        self.data_dir = Path("receipt_data")
-        self.data_dir.mkdir(exist_ok=True)
+        self.client = OpenAI(
+            api_key=settings.OPENAI_API_KEY )
+        self.model = "gpt-4o"
+
 
     # Encode image to Base64
     def encode_image(self, path):
@@ -120,39 +77,26 @@ class ReceiptScanner:
                     ],
                 },
             ],
+            temperature=0,
             response_format=ReceiptAnalysisResponse,
         )
 
         parsed = response.choices[0].message.parsed
         data = parsed.dict()
 
+
+        grand_total = data["grand_total"]
+        total_tax = data.get("tax_amount", 0.00)
+
+        for category in data["categories"]:
+            total_price = category['total_price']
+            tax_amount = total_tax * total_price / grand_total
+            category['tax_amount'] = round(tax_amount, 2)
+    
         # Add metadata
         data["user_id"] = user_id
         data["scan_timestamp"] = datetime.now().isoformat()
-        data["image_path"] = str(image_path)
 
-        self._save_receipt(user_id, data)
         return data
 
-    # ─────────────────────────────────────────────────────────
-    # Save JSON
-    # ─────────────────────────────────────────────────────────
-    def _save_receipt(self, user_id, data):
-        file = self.data_dir / f"user_{user_id}.json"
-
-        if file.exists():
-            user_data = json.load(open(file))
-        else:
-            user_data = {"user_id": user_id, "receipts": []}
-
-        user_data["receipts"].append(data)
-        json.dump(user_data, open(file, "w"), indent=2)
-
-    # ─────────────────────────────────────────────────────────
-    # Get Receipts
-    # ─────────────────────────────────────────────────────────
-    def get_user_receipts(self, user_id):
-        file = self.data_dir / f"user_{user_id}.json"
-        if not file.exists():
-            return {"user_id": user_id, "receipts": []}
-        return json.load(open(file))
+    
