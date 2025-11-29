@@ -2,3 +2,4 @@
 .env
 __pycache__/
 **/__pycache__/
+fitness_berball_llm.egg-info/

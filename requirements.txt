@@ -48,4 +48,5 @@ uvicorn==0.34.3
 zstandard==0.23.0
 gunicorn
 langchain-openai
+bson
 -e .
