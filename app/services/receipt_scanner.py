@@ -92,6 +92,7 @@ class ReceiptScanner:
             total_price = category['total_price']
             tax_amount = total_tax * total_price / grand_total
             category['tax_amount'] = round(tax_amount, 2)
+            category['total_price_incl_tax'] = round(total_price + tax_amount, 2)
     
         # Add metadata
         data["user_id"] = user_id
