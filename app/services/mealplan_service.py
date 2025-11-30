@@ -1,16 +1,31 @@
 import json
 import os
+from typing import List
 from app.models.meal_schema import (
     MealPlanRequest, 
     TDietPlan,
-    TMealWithTime
+    TMealWithTime,
+    TMeal,
+    TMacroNutrients,
+    TMicroNutrients,
+    TNutrient
 )
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage
+from openai import OpenAI
+from pydantic import BaseModel
 from app.config.settings import OPENAI_API_KEY
 
 from dotenv import load_dotenv
 load_dotenv()
+
+# Initialize OpenAI client
+client = OpenAI(api_key=OPENAI_API_KEY)
+
+# -----------------------------
+# Structured Output Models for OpenAI
+# -----------------------------
+class MealPlanOutput(BaseModel):
+    """Output schema for OpenAI structured output"""
+    dailyMeals: List[TMealWithTime]
 
 # -----------------------------
 # TDEE & Macro Calculation
@@ -91,17 +106,6 @@ def calculate_tdee_and_macros(request: MealPlanRequest) -> dict:
         "tdee_estimation_method": "mifflin-st-jeor + activity multiplier + goal adjustment"
     }
 
-# -----------------------------
-# Initialize LLM
-# -----------------------------
-llm = ChatOpenAI(
-    model="gpt-4o-mini",
-    temperature=0.2,
-    api_key=OPENAI_API_KEY,
-    max_tokens=None,
-    timeout=None,
-    max_retries=2,
-)
 
 
 # -----------------------------
@@ -109,130 +113,66 @@ llm = ChatOpenAI(
 # -----------------------------
 async def generate_meal_plan(request: MealPlanRequest) -> TDietPlan:
     """
-    Generate meal plan using ChatOpenAI and return TDietPlan directly.
+    Generate meal plan using OpenAI Structured Outputs for optimal performance.
     """
     # Calculate TDEE and macros
     nutrition_data = calculate_tdee_and_macros(request)
     
-    # Build dietary requirements string (using new field names)
+    # Build dietary requirements string
     diet_type = request.dietary_preferences.diet_type
     restrictions = request.dietary_preferences.restrictions
     restrictions_str = ", ".join(restrictions) if restrictions else "None"
     location = request.user_profile.location
     
-    # Build structured prompt
-    user_prompt = f"""
-You are a professional nutritionist. Create a {request.number_of_days}-day meal plan with the following requirements:
+    # Simplified, concise prompt for faster processing
+    user_prompt = f"""Create a {request.number_of_days}-day meal plan.
 
-**User Profile:**
-- Age: {request.user_profile.age}, Gender: {request.user_profile.gender}
-- Weight: {request.user_profile.weight_kg}kg, Height: {request.user_profile.height_cm}cm
-- Activity Level: {request.user_profile.activity_level}
-- Location: {location}
-- Goal: {request.fitness_goal}
+User: {request.user_profile.age}yo {request.user_profile.gender}, {request.user_profile.weight_kg}kg, {request.user_profile.height_cm}cm, {request.user_profile.activity_level}
+Location: {location}
+Goal: {request.fitness_goal}
 
-**Nutritional Targets (per day):**
-- Calories: {nutrition_data['calorie_target']}
-- Protein: {nutrition_data['protein_g']}g
-- Carbs: {nutrition_data['carbs_g']}g
-- Fats: {nutrition_data['fats_g']}g
+Daily Targets: {nutrition_data['calorie_target']} cal, {nutrition_data['protein_g']}g protein, {nutrition_data['carbs_g']}g carbs, {nutrition_data['fats_g']}g fats
 
-**Dietary Requirements:**
-- Diet Type: {diet_type}
-- Restrictions: {restrictions_str}
-- Location Preference: Use locally available ingredients from {location}
+Diet: {diet_type}, Restrictions: {restrictions_str}
 
-**Instructions:**
-1. Create {request.number_of_days} day(s) of meals
-2. For EACH day, provide 4 meals: breakfast, lunch, snack, and dinner
-3. Use ingredients commonly available in {location}
-4. Each meal should contribute to hitting the daily calorie and macro targets
-5. Respect all dietary restrictions
-6. Make meals practical, delicious, and culturally appropriate
+Create {request.number_of_days * 4} meals ({request.number_of_days} days × 4 meals/day: breakfast, lunch, snack, dinner).
+Use local {location} ingredients. Keep meals practical and culturally appropriate.
+Include only the top 3-4 most significant vitamins and minerals per meal."""
 
-**Output Format (STRICT JSON):**
-{{
-  "dailyMeals": [
-    {{
-      "mealTime": "breakfast",
-      "mealDetails": {{
-        "foodName": ["Food 1", "Food 2", "Food 3"],
-        "dailyServingSize": "Detailed serving sizes",
-        "macroNutrients": {{
-          "calories": 500,
-          "protein": 30,
-          "carbs": 50,
-          "fats": 15
-        }},
-        "microNutrients": {{
-          "vitamins": [
-            {{"name": "Vitamin C", "quantity": 50, "unit": "mg"}},
-            {{"name": "Vitamin D", "quantity": 400, "unit": "IU"}}
-          ],
-          "minerals": [
-            {{"name": "Iron", "quantity": 5, "unit": "mg"}},
-            {{"name": "Calcium", "quantity": 200, "unit": "mg"}}
-          ]
-        }}
-      }}
-    }},
-    {{
-      "mealTime": "lunch",
-      "mealDetails": {{ ... }}
-    }},
-    {{
-      "mealTime": "snack",
-      "mealDetails": {{ ... }}
-    }},
-    {{
-      "mealTime": "dinner",
-      "mealDetails": {{ ... }}
-    }}
-  ]
-}}
-
-**CRITICAL:**
-- Output ONLY the JSON structure with "dailyMeals" array
-- Each day repeats the pattern: breakfast, lunch, snack, dinner
-- For {request.number_of_days} days, multiply the meals accordingly
-- foodName MUST be an array of strings
-- Include realistic micronutrient estimates
-
-Generate the meal plan now in STRICT JSON format.
-"""
-
-    messages = [
-        SystemMessage(content="You are an expert AI nutritionist creating structured JSON meal plans. Output ONLY valid JSON."),
-        HumanMessage(content=user_prompt)
-    ]
-    
-    # Call the LLM
-    response = llm.invoke(messages)
-    ai_output = response.content
-    
     try:
-        # Try to parse the JSON response
-        parsed_output = json.loads(ai_output)
-        daily_meals_data = parsed_output.get("dailyMeals", [])
-    except json.JSONDecodeError:
-        # If JSON parsing fails, try to extract JSON from markdown code blocks
-        if "```json" in ai_output:
-            start = ai_output.find("```json") + 7
-            end = ai_output.find("```", start)
-            json_str = ai_output[start:end].strip()
-            try:
-                parsed_output = json.loads(json_str)
-                daily_meals_data = parsed_output.get("dailyMeals", [])
-            except json.JSONDecodeError:
-                raise ValueError("Failed to parse LLM response as JSON")
-        else:
-            raise ValueError("Failed to parse LLM response - no JSON found")
-    
-    # Return TDietPlan directly
-    return TDietPlan(
-        user_id=None,  # Can be populated from request if needed
-        dailyMeals=daily_meals_data
-    )
+        # Use structured outputs for guaranteed format and faster performance
+        completion = client.beta.chat.completions.parse(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are an expert nutritionist creating structured meal plans. Output only valid structured data."
+                },
+                {
+                    "role": "user",
+                    "content": user_prompt
+                }
+            ],
+            response_format=MealPlanOutput,
+            temperature=0,  # Deterministic, faster
+        )
+        
+        # Extract the parsed response
+        meal_plan_output = completion.choices[0].message.parsed
+        
+        if not meal_plan_output or not meal_plan_output.dailyMeals:
+            raise ValueError("Failed to generate meal plan - empty response")
+        
+        # Return TDietPlan directly
+        return TDietPlan(
+            user_id=None,
+            dailyMeals=meal_plan_output.dailyMeals
+        )
+        
+    except Exception as e:
+        # Fallback error handling
+        raise ValueError(f"Failed to generate meal plan: {str(e)}")
+
 
 
 # -----------------------------
@@ -240,7 +180,7 @@ Generate the meal plan now in STRICT JSON format.
 # -----------------------------
 async def update_meal_plan(original_diet_plan: dict, feedback: str, user_id: str = None) -> TDietPlan:
     """
-    Update/refine an existing meal plan based on user feedback.
+    Update/refine an existing meal plan based on user feedback using OpenAI Structured Outputs.
     
     Args:
         original_diet_plan: Dictionary containing dailyMeals array
@@ -253,96 +193,50 @@ async def update_meal_plan(original_diet_plan: dict, feedback: str, user_id: str
     # Convert original plan to JSON string for the prompt
     original_plan_json = json.dumps(original_diet_plan, indent=2)
     
-    user_prompt = f"""
-You are an expert nutritionist helping to refine a meal plan based on user feedback.
+    # Simplified prompt
+    user_prompt = f"""Refine this meal plan based on user feedback.
 
-**CRITICAL INSTRUCTIONS:**
-1. **Analyze Intent:** First, read the user's feedback carefully to understand what they want.
-2. **Make a Decision:**
-   - If the user's feedback **asks for a change** (e.g., "too much chicken", "I don't like spinach", "need more protein", "make it vegetarian"), you MUST modify the meal plan accordingly.
-   - If the user's feedback expresses **satisfaction and does NOT ask for a change** (e.g., "great!", "this is perfect", "love it"), you MUST NOT change the plan.
-
-**Original Meal Plan:**
-```json
+Original Plan:
 {original_plan_json}
-```
 
-**User's Feedback:**
-"{feedback}"
+User Feedback: "{feedback}"
 
-**Instructions:**
-1. Carefully analyze the user's feedback
-2. Make specific, logical changes to the meal plan if requested:
-   - Swap ingredients the user dislikes
-   - Adjust portion sizes if too much/too little
-   - Change macro distribution if needed
-   - Modify meal types (vegetarian, keto, etc.) if requested
-   - Add variety if requested
-3. Keep the same structure (same number of meals, same meal times)
-4. Ensure the updated plan is still nutritionally balanced
-5. Maintain realistic serving sizes and food combinations
+Instructions:
+- If feedback requests changes: modify the plan accordingly (swap foods, adjust portions, change diet type, etc.)
+- If feedback is just positive (e.g., "great!", "love it"): keep plan unchanged
+- Maintain same meal structure and nutritional balance
+- Include only top 3-4 vitamins/minerals per meal"""
 
-**Output Format (STRICT JSON):**
-Return ONLY the updated meal plan in this exact format:
-{{
-  "dailyMeals": [
-    {{
-      "mealTime": "breakfast",
-      "mealDetails": {{
-        "foodName": ["Food 1", "Food 2"],
-        "dailyServingSize": "Detailed serving sizes",
-        "macroNutrients": {{
-          "calories": 500,
-          "protein": 30,
-          "carbs": 50,
-          "fats": 15
-        }},
-        "microNutrients": {{
-          "vitamins": [
-            {{"name": "Vitamin C", "quantity": 50, "unit": "mg"}}
-          ],
-          "minerals": [
-            {{"name": "Iron", "quantity": 5, "unit": "mg"}}
-          ]
-        }}
-      }}
-    }},
-    ... (include all meals from original plan)
-  ]
-}}
-
-Generate the updated meal plan now in STRICT JSON format.
-"""
-
-    messages = [
-        SystemMessage(content="You are an expert AI nutritionist updating meal plans based on user feedback. Output ONLY valid JSON."),
-        HumanMessage(content=user_prompt)
-    ]
-    
-    # Call the LLM
-    response = llm.invoke(messages)
-    ai_output = response.content
-    
     try:
-        # Try to parse the JSON response
-        parsed_output = json.loads(ai_output)
-        daily_meals_data = parsed_output.get("dailyMeals", [])
-    except json.JSONDecodeError:
-        # If JSON parsing fails, try to extract JSON from markdown code blocks
-        if "```json" in ai_output:
-            start = ai_output.find("```json") + 7
-            end = ai_output.find("```", start)
-            json_str = ai_output[start:end].strip()
-            try:
-                parsed_output = json.loads(json_str)
-                daily_meals_data = parsed_output.get("dailyMeals", [])
-            except json.JSONDecodeError:
-                raise ValueError("Failed to parse LLM response as JSON")
-        else:
-            raise ValueError("Failed to parse LLM response - no JSON found")
-    
-    # Return updated TDietPlan
-    return TDietPlan(
-        user_id=user_id,
-        dailyMeals=daily_meals_data
-    )
+        # Use structured outputs for guaranteed format and faster performance
+        completion = client.beta.chat.completions.parse(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are an expert nutritionist updating meal plans based on user feedback. Output only valid structured data."
+                },
+                {
+                    "role": "user",
+                    "content": user_prompt
+                }
+            ],
+            response_format=MealPlanOutput,
+            temperature=0,  # Deterministic, faster
+        )
+        
+        # Extract the parsed response
+        meal_plan_output = completion.choices[0].message.parsed
+        
+        if not meal_plan_output or not meal_plan_output.dailyMeals:
+            raise ValueError("Failed to update meal plan - empty response")
+        
+        # Return updated TDietPlan
+        return TDietPlan(
+            user_id=user_id,
+            dailyMeals=meal_plan_output.dailyMeals
+        )
+        
+    except Exception as e:
+        # Fallback error handling
+        raise ValueError(f"Failed to update meal plan: {str(e)}")
