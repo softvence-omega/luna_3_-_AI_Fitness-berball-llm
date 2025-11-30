@@ -86,3 +86,9 @@ class MealPlanResponse(BaseModel):
     summary: MealPlanSummary
     diet_plan: TDietPlan  # Main diet plan with new structure
     adjustment_options: AdjustmentOptions
+
+class MealPlanUpdateRequest(BaseModel):
+    """Request model for updating/refining an existing meal plan"""
+    user_id: Optional[str] = None
+    dailyMeals: List[TMealWithTime]
+    feedback: str

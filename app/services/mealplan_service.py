@@ -233,3 +233,116 @@ Generate the meal plan now in STRICT JSON format.
         user_id=None,  # Can be populated from request if needed
         dailyMeals=daily_meals_data
     )
+
+
+# -----------------------------
+# Meal Plan Update/Refinement
+# -----------------------------
+async def update_meal_plan(original_diet_plan: dict, feedback: str, user_id: str = None) -> TDietPlan:
+    """
+    Update/refine an existing meal plan based on user feedback.
+    
+    Args:
+        original_diet_plan: Dictionary containing dailyMeals array
+        feedback: User's feedback on the meal plan
+        user_id: Optional user identifier
+    
+    Returns:
+        TDietPlan: Updated meal plan
+    """
+    # Convert original plan to JSON string for the prompt
+    original_plan_json = json.dumps(original_diet_plan, indent=2)
+    
+    user_prompt = f"""
+You are an expert nutritionist helping to refine a meal plan based on user feedback.
+
+**CRITICAL INSTRUCTIONS:**
+1. **Analyze Intent:** First, read the user's feedback carefully to understand what they want.
+2. **Make a Decision:**
+   - If the user's feedback **asks for a change** (e.g., "too much chicken", "I don't like spinach", "need more protein", "make it vegetarian"), you MUST modify the meal plan accordingly.
+   - If the user's feedback expresses **satisfaction and does NOT ask for a change** (e.g., "great!", "this is perfect", "love it"), you MUST NOT change the plan.
+
+**Original Meal Plan:**
+```json
+{original_plan_json}
+```
+
+**User's Feedback:**
+"{feedback}"
+
+**Instructions:**
+1. Carefully analyze the user's feedback
+2. Make specific, logical changes to the meal plan if requested:
+   - Swap ingredients the user dislikes
+   - Adjust portion sizes if too much/too little
+   - Change macro distribution if needed
+   - Modify meal types (vegetarian, keto, etc.) if requested
+   - Add variety if requested
+3. Keep the same structure (same number of meals, same meal times)
+4. Ensure the updated plan is still nutritionally balanced
+5. Maintain realistic serving sizes and food combinations
+
+**Output Format (STRICT JSON):**
+Return ONLY the updated meal plan in this exact format:
+{{
+  "dailyMeals": [
+    {{
+      "mealTime": "breakfast",
+      "mealDetails": {{
+        "foodName": ["Food 1", "Food 2"],
+        "dailyServingSize": "Detailed serving sizes",
+        "macroNutrients": {{
+          "calories": 500,
+          "protein": 30,
+          "carbs": 50,
+          "fats": 15
+        }},
+        "microNutrients": {{
+          "vitamins": [
+            {{"name": "Vitamin C", "quantity": 50, "unit": "mg"}}
+          ],
+          "minerals": [
+            {{"name": "Iron", "quantity": 5, "unit": "mg"}}
+          ]
+        }}
+      }}
+    }},
+    ... (include all meals from original plan)
+  ]
+}}
+
+Generate the updated meal plan now in STRICT JSON format.
+"""
+
+    messages = [
+        SystemMessage(content="You are an expert AI nutritionist updating meal plans based on user feedback. Output ONLY valid JSON."),
+        HumanMessage(content=user_prompt)
+    ]
+    
+    # Call the LLM
+    response = llm.invoke(messages)
+    ai_output = response.content
+    
+    try:
+        # Try to parse the JSON response
+        parsed_output = json.loads(ai_output)
+        daily_meals_data = parsed_output.get("dailyMeals", [])
+    except json.JSONDecodeError:
+        # If JSON parsing fails, try to extract JSON from markdown code blocks
+        if "```json" in ai_output:
+            start = ai_output.find("```json") + 7
+            end = ai_output.find("```", start)
+            json_str = ai_output[start:end].strip()
+            try:
+                parsed_output = json.loads(json_str)
+                daily_meals_data = parsed_output.get("dailyMeals", [])
+            except json.JSONDecodeError:
+                raise ValueError("Failed to parse LLM response as JSON")
+        else:
+            raise ValueError("Failed to parse LLM response - no JSON found")
+    
+    # Return updated TDietPlan
+    return TDietPlan(
+        user_id=user_id,
+        dailyMeals=daily_meals_data
+    )
