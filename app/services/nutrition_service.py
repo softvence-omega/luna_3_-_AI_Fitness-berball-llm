@@ -54,6 +54,30 @@ async def get_nutritional_analysis(image_bytes: bytes) -> dict:
     {format_instructions}
     """
 
+    messages = [
+        SystemMessage(content="You are an AI nutritionist specializing in analyzing food images to provide accurate nutritional information."),
+        HumanMessage(content=[
+            {"type": "text", "text": user_prompt},
+            {"type": "image_url", "image_url": {"url": data_uri}},
+        ])
+    ]
+
+    response = llm.invoke(messages)
+    parsed_response = output_parser.parse(response.content)
+
+
+
+    protein_g = int(parsed_response.total_protein_g)
+    carbs_g = int(parsed_response.total_carbs_g)
+    fats_g = int(parsed_response.total_fats_g)
+
+    total_calories = (protein_g * 4) + (carbs_g * 4) + (fats_g * 9)
+    parsed_response.total_calories = str(total_calories)
+
+    return parsed_response
+
+
+
     """
         # **Output Example**:
     # {{
@@ -150,24 +174,3 @@ async def get_nutritional_analysis(image_bytes: bytes) -> dict:
     #     "total_calories": "520"
     # }}
     """
-    messages = [
-        SystemMessage(content="You are an AI nutritionist specializing in analyzing food images to provide accurate nutritional information."),
-        HumanMessage(content=[
-            {"type": "text", "text": user_prompt},
-            {"type": "image_url", "image_url": {"url": data_uri}},
-        ])
-    ]
-
-    response = llm.invoke(messages)
-    parsed_response = output_parser.parse(response.content)
-
-
-
-    protein_g = int(parsed_response.total_protein_g)
-    carbs_g = int(parsed_response.total_carbs_g)
-    fats_g = int(parsed_response.total_fats_g)
-
-    total_calories = (protein_g * 4) + (carbs_g * 4) + (fats_g * 9)
-    parsed_response.total_calories = str(total_calories)
-
-    return parsed_response

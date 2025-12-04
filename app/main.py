@@ -414,6 +414,8 @@ from app.api.nutrition_router import router as nutrition_router
 from app.api.workout_router import router as workout_router
 from app.api.workout_calorie_calculation import router as workout_calorie_calculation_router
 from app.api.reciept import router as reciept_router
+from app.api.package_food_router import router as package_food_router
+
 
 app.include_router(nutrition_router)
 app.include_router(workout_router)
@@ -422,3 +424,5 @@ app.include_router(workout_calorie_calculation_router)
 app.include_router(reciept_router, prefix="/receipt", tags=["Receipt Scanner"])
 app.include_router(mealplan_router, tags=["MealPlan"])
 
+
+app.include_router(package_food_router, prefix="/package-food", tags=["Packaged Food"])

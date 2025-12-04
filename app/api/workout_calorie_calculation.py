@@ -21,7 +21,8 @@ async def calculate_calories(exercise_data: ExerciseRequest):
             "reps": exercise_data.reps,
             "set": getattr(exercise_data, "sets", None) or exercise_data.sets,
             "resetTime": getattr(exercise_data, "resetTime", None) or exercise_data.resetTime,
-            "restime": getattr(exercise_data, "restTime", None) or exercise_data.restTime
+            "restime": getattr(exercise_data, "restTime", None) or exercise_data.restTime,
+            "distance": getattr(exercise_data, "distance", None),
         }
         calculation_result = calculate_calories_with_openai(exercise_dict)
         

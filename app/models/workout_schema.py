@@ -65,6 +65,8 @@ class ExerciseRequest(BaseModel):
     sets: int = Field(..., description="Number of sets", gt=0, example=3)
     restTime: float = Field(..., description="Rest time between sets in seconds", ge=0, example=20)
 
+    distance: Optional[float] = Field(None, description="Distance covered in meters (for cardio exercises)", example=0)
+
 
 class CalorieResponse(BaseModel):
     total_calories_burned: float

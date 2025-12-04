@@ -58,6 +58,7 @@ def calculate_calories_with_openai(exercise_data: Dict[str, Any]) -> dict:
     sets = exercise_data.get("set", 0)
     reset_time = exercise_data.get("resetTime", 0)
     restime = exercise_data.get("restime", None)
+    distance = exercise_data.get("distance", None)
 
     # Input validation (basic)
     if not user_weight or user_weight <= 0:
@@ -91,6 +92,8 @@ def calculate_calories_with_openai(exercise_data: Dict[str, Any]) -> dict:
         prompt += f"- Rest time between sets: {restime} seconds\n"
     if exercise_description:
         prompt += f"- Additional info: {exercise_description}\n"
+    if distance and distance > 0:
+        prompt += f"- Distance covered: {distance} meters\n"
 
     prompt += f"""
 
