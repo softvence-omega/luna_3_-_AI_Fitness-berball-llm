@@ -40,7 +40,8 @@ async def calculate_calories(exercise_data: ExerciseRequest):
                 "resetTime": exercise_data.resetTime,
                 "rest_time": exercise_data.restTime,
                 "body_weight": exercise_data.body_weight,
-                "height": exercise_data.height
+                "height": exercise_data.height,
+                "distance": exercise_data.distance,
             },
         )
         return response
