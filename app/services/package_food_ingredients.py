@@ -19,12 +19,12 @@ class MicroNutrient(BaseModel):
 class PackagedFoodResponse(BaseModel):
     product_name: str = Field(description="Name of the product from the package")
     ingredients: List[Ingredient] = Field(description="List of all ingredients found on the package")
-    total_protein_g: str = Field(description="Total protein in grams")
-    total_carbs_g: str = Field(description="Total carbohydrates in grams")
-    total_fats_g: str = Field(description="Total fats in grams")
-    total_fiber_g: str = Field(description="Total fiber in grams")
+    total_protein_g: str = Field(description="Total protein in grams  - without units")
+    total_carbs_g: str = Field(description="Total carbohydrates in grams - without units")
+    total_fats_g: str = Field(description="Total fats in grams - without units")
+    total_fiber_g: str = Field(description="Total fiber in grams - without units")
     micro_nutrients: List[MicroNutrient] = Field(description="List of micronutrients (vitamins and minerals)")
-    total_calories: str = Field(description="Total calories")
+    total_calories: str = Field(description="Total calories - without units")
 
 llm = ChatOpenAI(
     model="gpt-4o",
