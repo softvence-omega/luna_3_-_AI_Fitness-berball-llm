@@ -9,6 +9,7 @@ import asyncio
 from typing import Dict, Optional
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.mealplan_router import router as mealplan_router
+from app.api.ingredient_scanner_router import router as ingredient_scanner_router
 from app.config.settings import OPENAI_API_KEY, OPENAI_API_URL
 
 load_dotenv()
@@ -426,3 +427,4 @@ app.include_router(mealplan_router, tags=["MealPlan"])
 
 
 app.include_router(package_food_router, prefix="/package-food", tags=["Packaged Food"])
+app.include_router(ingredient_scanner_router)
