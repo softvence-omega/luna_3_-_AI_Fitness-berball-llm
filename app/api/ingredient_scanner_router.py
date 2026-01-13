@@ -6,16 +6,16 @@ router = APIRouter(
     tags=["Ingredient Scanner"]
 )
 
-@router.post("/", response_model=IngredientListResponse)
-async def scan_food_ingredients(file: UploadFile = File(...)):
+@router.post("", response_model=IngredientListResponse)
+async def scan_food_ingredients(image: UploadFile = File(...)):
     """
     Scan an image of food (raw or packaged) to get a list of ingredients.
     """
-    if not file.content_type.startswith("image/"):
+    if not image.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
     
     try:
-        image_bytes = await file.read()
+        image_bytes = await image.read()
         response = await scan_ingredients(image_bytes)
         return response
     except Exception as e:
