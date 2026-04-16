@@ -4,3 +4,7 @@ __pycache__/
 **/__pycache__/
 *.pyc
 fitness_berball_llm.egg-info/
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore
